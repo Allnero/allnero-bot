@@ -1,2 +1,3 @@
 # allnero-bot
 
+Mastodon bot
