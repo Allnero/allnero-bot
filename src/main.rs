@@ -1,8 +1,8 @@
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::env;
 use std::thread;
 use std::time::Duration;
-use std::collections::HashMap;
 
 #[derive(Deserialize)]
 struct Monero {
@@ -15,20 +15,20 @@ struct Monero {
 fn main() {
     let mut token: String = String::new();
 
-	match env::var("BOT_TOKEN") {
-		Ok(t) => token=t,
-		Err(e) => println!("Error={:?}", e),
-	}
+    match env::var("BOT_TOKEN") {
+        Ok(t) => token = t,
+        Err(e) => println!("Error={:?}", e),
+    }
 
     let client = reqwest::Client::new();
 
     loop {
         let res = reqwest::get("https://moneroblocks.info/api/get_stats");
-        
+
         match res {
             Ok(mut body) => {
                 let json = body.json();
-                
+
                 match json {
                     Ok(data) => {
                         let monero: Monero = data;
@@ -44,18 +44,20 @@ fn main() {
                             hashrate_word = "kH/s"
                         }
 
-                        let status = format!("Hashrate: {} {}\nHeight: {}\nDifficulty: {}\nTotal emission: {}", 
-                                        hashrate_num,
-                                        hashrate_word,
-                                        monero.height,
-                                        monero.difficulty,
-                                        monero.total_emission
-                                    );
+                        let status = format!(
+                            "Hashrate: {} {}\nHeight: {}\nDifficulty: {}\nTotal emission: {}",
+                            hashrate_num,
+                            hashrate_word,
+                            monero.height,
+                            monero.difficulty,
+                            monero.total_emission
+                        );
 
                         let mut map = HashMap::new();
                         map.insert("status", status);
-                        
-                        let _res = client.post("https://mastodonsocial.ru/api/v1/statuses")
+
+                        let _res = client
+                            .post("https://mastodonsocial.ru/api/v1/statuses")
                             .bearer_auth(&token)
                             .json(&map)
                             .send()
