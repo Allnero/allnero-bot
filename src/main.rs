@@ -45,7 +45,7 @@ fn main() {
                         }
 
                         let status = format!(
-                            "Hashrate: {} {}\nHeight: {}\nDifficulty: {}\nTotal emission: {}",
+                            "Hashrate: {} {}\nHeight: {}\nDifficulty: {}\nTotal emission: {}\n\n#monero",
                             hashrate_num,
                             hashrate_word,
                             monero.height,
