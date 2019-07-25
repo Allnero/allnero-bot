@@ -13,74 +13,62 @@ struct Monero {
 }
 
 fn main() {
-    let mut token: String = String::new();
-
-    match env::var("BOT_TOKEN") {
-        Ok(t) => token = t,
-        Err(e) => println!("Error={:?}", e),
-    }
+    let token = match env::var("BOT_TOKEN") {
+        Ok(t) => t,
+        Err(e) => {
+            panic!("Error get token: {:?}", e);
+        }
+    };
 
     let client = reqwest::Client::new();
 
     loop {
         let res = reqwest::get("https://moneroblocks.info/api/get_stats");
 
-        match res {
-            Ok(mut body) => {
-                let json = body.json();
+        let json = match res {
+            Ok(mut body) => body.json(),
+            Err(e) => {
+                panic!("Error get request: {:?}", e);
+            }
+        };
 
-                match json {
-                    Ok(data) => {
-                        let monero: Monero = data;
+        let monero: Monero = match json {
+            Ok(data) => data,
+            Err(e) => {
+                panic!("Error get request: {:?}", e);
+            }
+        };
 
-                        let mut hashrate_word = "H/s";
-                        let mut hashrate_num = 0.0;
+        let (hashrate_num, hashrate_word) = if monero.hashrate < 1000000.0 {
+            (monero.hashrate / 1000.0, "kH/s")
+        } else {
+            (monero.hashrate / 1000000.0, "MH/s")
+        };
 
-                        if monero.hashrate > 1000000.0 {
-                            hashrate_num = monero.hashrate / 1000000.0;
-                            hashrate_word = "MH/s"
-                        } else if monero.hashrate > 1000.0 {
-                            hashrate_num = monero.hashrate / 1000.0;
-                            hashrate_word = "kH/s"
-                        }
+        let status = format!(
+            "Hashrate: {} {}\nHeight: {}\nDifficulty: {}\nTotal emission: {}\n\n#monero",
+            hashrate_num, hashrate_word, monero.height, monero.difficulty, monero.total_emission
+        );
 
-                        let status = format!(
-                            "Hashrate: {} {}\nHeight: {}\nDifficulty: {}\nTotal emission: {}\n\n#monero",
-                            hashrate_num,
-                            hashrate_word,
-                            monero.height,
-                            monero.difficulty,
-                            monero.total_emission
-                        );
+        let mut map = HashMap::new();
+        map.insert("status", status);
 
-                        let mut map = HashMap::new();
-                        map.insert("status", status);
-
-                        let _res = client
-                            .post("https://mastodonsocial.ru/api/v1/statuses")
-                            .bearer_auth(&token)
-                            .json(&map)
-                            .send()
-                            .map_err(|err| println!("request error: {}", err))
-                            .map(|mut body| {
-                                let status = body.status();
-                                if status == 200 {
-                                    println!("Status code:{:?}", body.status());
-                                } else {
-                                    println!("Status code:{:?}", body.status());
-                                    println!("{:?}", body.text());
-                                }
-                            });
-                    }
-                    Err(error) => {
-                        panic!("Error get request: {:?}", error);
-                    }
+        let _res = client
+            .post("https://mastodonsocial.ru/api/v1/statuses")
+            .bearer_auth(&token)
+            .json(&map)
+            .send()
+            .map_err(|err| println!("request error: {}", err))
+            .map(|mut body| {
+                let status = body.status();
+                if status == 200 {
+                    println!("Status code:{:?}", body.status());
+                } else {
+                    println!("Status code:{:?}", body.status());
+                    println!("{:?}", body.text());
                 }
-            }
-            Err(error) => {
-                panic!("Error get request: {:?}", error);
-            }
-        }
+            });
+
         thread::sleep(Duration::from_secs(60))
     }
 }
