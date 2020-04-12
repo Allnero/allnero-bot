@@ -1,18 +1,17 @@
-use serde::Deserialize;
-use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
 use std::env;
 use std::thread;
 use std::time::Duration;
 
-#[derive(Deserialize)]
-struct Monero {
-    difficulty: u64,
-    height: u64,
-    hashrate: f64,
-    total_emission: String,
+mod monero;
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Post {
+    status: String,
 }
 
-fn main() {
+#[tokio::main]
+async fn main() -> Result<(), reqwest::Error> {
     let token = match env::var("BOT_TOKEN") {
         Ok(t) => t,
         Err(e) => {
@@ -20,55 +19,35 @@ fn main() {
         }
     };
 
+    let mastodon_domain = match env::var("MASTODON_DOMAIN") {
+        Ok(t) => t,
+        Err(e) => {
+            panic!("Error get mastodon domain: {:?}", e);
+        }
+    };
+
+    let mastodon_url = format!("https://{}/api/v1/statuses", mastodon_domain);
+
+    let minute = 60;
+    let hour = minute * 60;
+
     let client = reqwest::Client::new();
 
     loop {
-        let res = reqwest::get("https://moneroblocks.info/api/get_stats");
+        let status = monero::get_status().await?;
 
-        let json = match res {
-            Ok(mut body) => body.json(),
-            Err(e) => {
-                panic!("Error get request: {:?}", e);
-            }
-        };
+        let new_post = Post { status: status };
 
-        let monero: Monero = match json {
-            Ok(data) => data,
-            Err(e) => {
-                panic!("Error get request: {:?}", e);
-            }
-        };
-
-        let (hashrate_num, hashrate_word) = if monero.hashrate < 1000000.0 {
-            (monero.hashrate / 1000.0, "kH/s")
-        } else {
-            (monero.hashrate / 1000000.0, "MH/s")
-        };
-
-        let status = format!(
-            "Hashrate: {} {}\nHeight: {}\nDifficulty: {}\nTotal emission: {}\n\n#monero",
-            hashrate_num, hashrate_word, monero.height, monero.difficulty, monero.total_emission
-        );
-
-        let mut map = HashMap::new();
-        map.insert("status", status);
-
-        let _res = client
-            .post("https://mastodonsocial.ru/api/v1/statuses")
+        let res = client
+            .post(&mastodon_url)
             .bearer_auth(&token)
-            .json(&map)
+            .json(&new_post)
             .send()
-            .map_err(|err| println!("request error: {}", err))
-            .map(|mut body| {
-                let status = body.status();
-                if status == 200 {
-                    println!("Status code:{:?}", body.status());
-                } else {
-                    println!("Status code:{:?}", body.status());
-                    println!("{:?}", body.text());
-                }
-            });
+            .await?;
 
-        thread::sleep(Duration::from_secs(60))
+        let code = res.status().as_u16();
+        println!("Status code: {}", code);
+
+        thread::sleep(Duration::from_secs(hour))
     }
 }
