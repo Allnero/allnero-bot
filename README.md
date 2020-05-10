@@ -1,6 +1,6 @@
 # allnero-bot
 
-Mastodon bot
+Allnero mastodon bot that reports cryptocurrency news and blockchain statuses
 
 ## env
 
