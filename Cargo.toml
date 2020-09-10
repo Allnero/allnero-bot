@@ -6,8 +6,8 @@ description = "Mastodon bot"
 edition = "2018"
 license = "GPL-3.0"
 readme = "README.md"
-homepage = "https://github.com/Allnero/allnero-bot"
-repository = "https://github.com/Allnero/allnero-bot"
+homepage = "https://github.com/CipherDogs/allnero-bot"
+repository = "https://github.com/CipherDogs/allnero-bot"
 keywords = ["allnero", "blockchain", "monero"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
